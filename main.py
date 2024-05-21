@@ -1,52 +1,88 @@
 import os
+import random
 import time
 from math import pi, sin, cos, ceil, sqrt
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-def get_magnitude(V: list) -> float:
+def create_vector(components: int, fill: float) -> list:
     """
-    Computes magnitude of vector
-    Raises ValueError if dimension is zero or not a vector (i.e. more than one column)
-    :param V: the vector
-    :return: magnitude
+    Create a new vector based on our specifications
+    :param components: number of vector components
+    :param fill: default number to set the each component to
+    :return: A new vector
     """
-    if len(V) == 0:
-        raise ValueError("Vector dimension is zero")
+    v = []
+    for i in range(components):
+        v.append([fill])
+    return v
 
-    if len(V[0]) != 1:
-        raise ValueError("Not a vector")
+def test_create_vector():
+    v = create_vector(3,1)
 
-    result = 0
-    for row in V:
-        result += row[0] ** 2
-    return sqrt(result)
+    # check dimensions correct
+    for u in v:
+        assert len(u) == 1
+        assert u[0] == 1
+    assert len(v) == 3
 
+    # check deep copy
+    t = create_vector(3, 1)
+    assert v is not t
 
-def normalize(V: list) -> list:
+test_create_vector()
+
+def vector_add(a: list, b:list) -> list:
     """
-    Returns unit vector
-    Raises ValueError if dimension is zero or not a vector (i.e. more than one column)
-    Also raises ValueError if V is zero vector
-    :param V: the vector
-    :return: unit vector in direction of V
+    Computes and returns a + b
+    a and b should remain unchanged after the additon
+    :param a: vector a
+    :param b: vector b
+    :return: a new vector object corresponding to a + b
     """
-    if len(V) == 0:
-        raise ValueError("Vector dimension is zero")
-
-    if len(V[0]) != 1:
-        raise ValueError("Not a vector")
-
-    mag = get_magnitude(V)
-    if mag == 0:
-        raise ValueError("Cannot normalize zero vector")
-
-    result = V.copy()
-    for row in result:
-        row[0] = row[0] / mag
+    result = create_vector(len(a), 0)
+    for i in range(len(result)):
+        result[i][0] = a[i][0] + b[i][0]
     return result
 
+def test_add_vector():
+    a = create_vector(3, 1)
+    b = create_vector(3, -2)
+
+    result = vector_add(a, b)
+    assert (len(result) == len(a))
+    for i in range(len(result)):
+        assert result[i][0] == -1
+        assert a[i][0] == 1
+        assert b[i][0] == -2
+
+test_add_vector()
+
+def vector_scalar_multiplication(V: list, c: float) -> list:
+    """
+    Computes an returns c * V
+    V should remain unchanged after the scalar multiplcation
+    :param V: the vector
+    :param c: the scalar
+    :return: a new vector corresponding to c * V
+    """
+    result = create_vector(len(V), 0)
+    for i in range(len(V)):
+        result[i][0] = c * V[i][0]
+    return result
+
+def test_vector_scale():
+    V = create_vector(3, 2.5)
+    c = 2
+
+    result = vector_scalar_multiplication(V, c)
+    assert (len(result) == len(V))
+    for i in range(len(result)):
+        assert result[i][0] == 5
+        assert V[i][0] == 2.5
+
+test_vector_scale()
 
 def dot_product(A: list, B: list) -> float:
     """
@@ -70,6 +106,84 @@ def dot_product(A: list, B: list) -> float:
     for i in range(len(A)):
         R += A[i][0] * B[i][0]
     return R
+
+def test_dot_product():
+    a = [[1],[2],[3]]
+    b = [[4],[5],[6]]
+    prod = dot_product(a, b)
+    assert prod == 1 * 4 + 2 * 5 + 3 * 6
+
+    assert dot_product(create_vector(3, 0), create_vector(3, 1)) == 0
+
+def get_magnitude(V: list) -> float:
+    """
+    Computes magnitude of vector
+    Raises ValueError if dimension is zero or not a vector (i.e. more than one column)
+    :param V: the vector
+    :return: magnitude
+    """
+    if len(V) == 0:
+        raise ValueError("Vector dimension is zero")
+
+    if len(V[0]) != 1:
+        raise ValueError("Not a vector")
+
+    # alternatively: use dot product
+    result = 0
+    for row in V:
+        result += row[0] ** 2
+    return sqrt(result)
+
+def test_get_magnitude():
+    assert get_magnitude(create_vector(3, 0)) == 0
+    assert get_magnitude(create_vector(3, 2)) == sqrt(12)
+    assert get_magnitude([[1],[2],[3]]) == sqrt(1 + 4 + 9)
+    b = [[4], [5], [6]]
+    assert get_magnitude(b) == sqrt(dot_product(b, b))
+
+def normalize(V: list) -> list:
+    """
+    Returns unit vector
+    Raises ValueError if dimension is zero or not a vector (i.e. more than one column)
+    Also raises ValueError if V is zero vector
+    V should not be modified while normalizing
+    :param V: the vector
+    :return: unit vector in direction of V
+    """
+    if len(V) == 0:
+        raise ValueError("Vector dimension is zero")
+
+    if len(V[0]) != 1:
+        raise ValueError("Not a vector")
+
+    mag = get_magnitude(V)
+    if mag == 0:
+        raise ValueError("Cannot normalize zero vector")
+
+    result = create_vector(len(V), 0)
+    for i in range(len(V)):
+        result[i][0] = V[i][0] / mag
+    return result
+
+EPS = 1e-6
+def test_normalize():
+    a = [[1], [2], [3]]
+    b = [[2], [4], [6]]
+    an = normalize(a)
+    bn = normalize(b)
+    assert abs(get_magnitude(an) - 1) < EPS
+    assert abs(get_magnitude(bn) - 1) < EPS
+
+    for i in range(1, 4):
+        assert a[i - 1][0] == i
+        assert abs(an[i - 1][0] - i/get_magnitude(a)) < EPS
+        assert abs(bn[i - 1][0] - 2*i/get_magnitude(b)) < EPS
+        assert abs(an[i - 1][0] - bn[i - 1][0]) < EPS
+
+test_normalize()
+
+print("Part 1 Complete!")
+exit(0)
 
 # system properties
 SCREEN_WIDTH = 80
