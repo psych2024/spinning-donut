@@ -12,7 +12,10 @@ def create_vector(components: int, fill: float) -> list:
     :param fill: default number to set the each component to
     :return: A new vector
     """
-    pass
+    v = []
+    for i in range(components):
+        v.append([fill])
+    return v
 
 def test_create_vector():
     v = create_vector(3,1)
@@ -37,7 +40,10 @@ def vector_add(a: list, b:list) -> list:
     :param b: vector b
     :return: a new vector object corresponding to a + b
     """
-    pass
+    result = create_vector(len(a), 0)
+    for i in range(len(result)):
+        result[i][0] = a[i][0] + b[i][0]
+    return result
 
 def test_add_vector():
     a = create_vector(3, 1)
@@ -60,7 +66,10 @@ def vector_scalar_multiplication(V: list, c: float) -> list:
     :param c: the scalar
     :return: a new vector corresponding to c * V
     """
-    pass
+    result = create_vector(len(V), 0)
+    for i in range(len(V)):
+        result[i][0] = c * V[i][0]
+    return result
 
 def test_vector_scale():
     V = create_vector(3, 2.5)
@@ -82,7 +91,20 @@ def dot_product(A: list, B: list) -> float:
     :param B: Vector B
     :return: Dot product of A and B
     """
-    pass
+
+    if len(A) == 0 or len(B) == 0:
+        raise ValueError("Vector dimension is zero")
+
+    if len(A[0]) != 1 or len(B[0]) != 1:
+        raise ValueError("Not a vector")
+
+    if len(A) != len(B):
+        raise ValueError("Dimensions don't match")
+
+    R = 0
+    for i in range(len(A)):
+        R += A[i][0] * B[i][0]
+    return R
 
 def test_dot_product():
     a = [[1],[2],[3]]
@@ -99,7 +121,17 @@ def get_magnitude(V: list) -> float:
     :param V: the vector
     :return: magnitude
     """
-    pass
+    if len(V) == 0:
+        raise ValueError("Vector dimension is zero")
+
+    if len(V[0]) != 1:
+        raise ValueError("Not a vector")
+
+    # alternatively: use dot product
+    result = 0
+    for row in V:
+        result += row[0] ** 2
+    return sqrt(result)
 
 def test_get_magnitude():
     assert get_magnitude(create_vector(3, 0)) == 0
@@ -117,7 +149,20 @@ def normalize(V: list) -> list:
     :param V: the vector
     :return: unit vector in direction of V
     """
-    pass
+    if len(V) == 0:
+        raise ValueError("Vector dimension is zero")
+
+    if len(V[0]) != 1:
+        raise ValueError("Not a vector")
+
+    mag = get_magnitude(V)
+    if mag == 0:
+        raise ValueError("Cannot normalize zero vector")
+
+    result = create_vector(len(V), 0)
+    for i in range(len(V)):
+        result[i][0] = V[i][0] / mag
+    return result
 
 EPS = 1e-6
 def test_normalize():
@@ -147,7 +192,7 @@ def n_matrix(row: int, col: int, n: float) -> list:
     :param col: number of columns
     :return: new matrix object
     """
-    pass
+    return [[n for _ in range(col)] for _ in range(row)]
 
 def n_matrix_test():
     m = n_matrix(2, 3, -1)
@@ -200,7 +245,17 @@ def matrix_addition(A: list, B: list) -> list:
     :param B: matrix B as a list
     :return: New matrix of A + B
     """
-    pass
+    if len(A) == 0 or len(B) == 0:
+        raise ValueError("Matrix dimension is zero")
+
+    if len(A) != len(B) or len(A[0]) != len(B[0]):
+        raise ValueError("Dimensions don't match")
+
+    R = n_matrix(len(A), len(A[0]), 0)
+    for i in range(len(A)):
+        for j in range(len(A[0])):
+            R[i][j] = A[i][j] + B[i][j]
+    return R
 
 def test_matrix_addition():
     a = n_matrix(3, 4, 2)
@@ -230,7 +285,18 @@ def matrix_multiply(A: list, B: list) -> list:
     :param B: matrix B as a list
     :return: New matrix of A * B
     """
-    pass
+    if len(A) == 0 or len(B) == 0:
+        raise ValueError("Matrix dimension is zero")
+
+    if len(A[0]) != len(B):
+        raise ValueError("Dimensions don't match")
+
+    R = n_matrix(len(A), len(B[0]), 0)
+    for i in range(len(A)):
+        for j in range(len(B[0])):
+            for k in range(len(B)):
+                R[i][j] += A[i][k] * B[k][j]
+    return R
 
 def test_matrix_multiply():
     zero = n_matrix(3, 3, 0)
@@ -278,10 +344,10 @@ TORUS_MINOR_RADIUS = 1.0
 TORUS_MAJOR_RADIUS = 2.0
 
 # default THETA_STEP = 0.07
-THETA_STEP = 0.2
+THETA_STEP = 0.07
 
 # default PHI_STEP = 0.03
-PHI_STEP = 0.2
+PHI_STEP = 0.03
 
 
 ILLUMINATION_CHAR = ".,-~:;=!*#$@"
@@ -331,8 +397,32 @@ def get_torus_points(alpha: float, beta: float) -> (list, list):
     # Ex: the normal vector for the first point in the list is stored at norms[0]
     norms = []
 
-    # TODO: add code to calculate points and normal vector
+    animation_rotations = matrix_multiply(x_axis_rotation_matrix(beta), y_axis_rotation_matrix(alpha))
+    theta = 0
+    while theta < 2 * pi:
+        circle = [[TORUS_MINOR_RADIUS],
+                  [0],
+                  [0]]
 
+        circle = matrix_multiply(y_axis_rotation_matrix(theta), circle)
+        circle_norm = circle.copy()
+
+        translation = [[TORUS_MAJOR_RADIUS],
+                       [0],
+                       [0]]
+        circle = matrix_addition(circle, translation)
+        theta += THETA_STEP
+
+        phi = 0
+        while phi < 2 * pi:
+            all_rotations = matrix_multiply(animation_rotations, z_axis_rotation_matrix(phi))
+            phi += PHI_STEP
+
+            point = matrix_multiply(all_rotations, circle)
+            normal = matrix_multiply(all_rotations, circle_norm)
+
+            points.append(point)
+            norms.append(normal)
     return points, norms
 
 def get_luminance_index(percentage: float) -> int:
@@ -411,5 +501,19 @@ BETA_STEP = 0.03
 alpha = 0.2
 beta = 1
 
-# TODO: add code to render donut
+print("precomputing")
+
+stages = []
+while alpha < 2 * pi or beta < 2 * pi:
+    stages.append(render_donut(*get_torus_points(alpha, beta)))
+    alpha += ALPHA_STEP
+    beta += BETA_STEP
+
+print("done!")
+
+count = 0
+while True:
+    redraw_screen(stages[count % len(stages)])
+    count += 1
+    time.sleep(ANIMATION_DELAY_SECONDS)
 
